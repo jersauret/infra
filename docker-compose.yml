@@ -7,11 +7,11 @@ services:
   #like
   # FROM nginx:latest
   #nginx:
-   # build: ./deployment/nginx
-    #container_name: nginx-web-server
+  # build: ./deployment/nginx
+  #container_name: nginx-web-server
   #  restart: on-failure
   #  networks:
-   #   - kong-net
+  #   - kong-net
   # this version below without a dockerfile
   nginx:
     image: nginx:latest
@@ -42,8 +42,8 @@ services:
     restart: on-failure
     networks:
       - kong-net
-
- 
+  
+  
   # Postgres: The database used by Kong
   kong-database:
     image: postgres:9.6
