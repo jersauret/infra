@@ -38,7 +38,7 @@ services:
   # Application Service A
   api_customer:
     container_name: api-customer
-    build: ../API-PayeTonKawa-Customer
+    build: ../API-Customer
     restart: on-failure
     networks:
       - kong-net
