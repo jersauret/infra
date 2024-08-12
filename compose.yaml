@@ -1,0 +1,120 @@
+version: '3.9'
+
+x-kong-config: &kong-env
+  KONG_DATABASE: ${KONG_DATABASE:-off}
+
+services:
+  kong:
+    image: kong/kong-gateway:3.3.1.0
+    user: "${KONG_USER}"
+    networks:
+      - kong-net
+    environment:
+      <<: *kong-env
+      KONG_DECLARATIVE_CONFIG: "/opt/kong/kong.yaml"
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:${KONG_ADMIN_PORT}
+      KONG_PROXY_LISTEN: 0.0.0.0:${KONG_PROXY_PORT}
+      KONG_ADMIN_GUI_URL: ${KONG_ADMIN_GUI_URL}
+    volumes:
+      - ./kong/kong.yaml:/opt/kong/kong.yaml
+    ports:
+      - '${KONG_PROXY_PORT}:8000'
+      - '${KONG_ADMIN_PORT}:8001'
+      - '${KONG_ADMIN_GUI_PORT}:8002'
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+    restart: on-failure
+    ulimits:
+      nofile:
+        soft: 4096
+        hard: 4096
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/:/etc/prometheus
+      - prom_data:/prometheus
+    networks:
+      - kong-net
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
+    volumes:
+      - ./grafana:/etc/grafana/provisioning/datasources
+    networks:
+      - kong-net
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    command: >
+      sh -c "rabbitmq-plugins enable --offline rabbitmq_management && rabbitmq-server"
+    networks:
+      - kong-net
+    restart: on-failure
+
+  customers_service:
+    container_name: customers_service
+    build: ../API-PayeTonKawa-Customers
+    restart: on-failure
+    depends_on:
+      - rabbitmq
+      - customers_mongo
+    networks:
+      - kong-net
+    environment:
+      - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
+      - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
+    ports:
+      - "3001:3001"
+
+  customers_mongo:
+    image: mongo
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - customers_mongo_data:/data/db
+    networks:
+        - kong-net
+networks:
+  kong-net:
+    driver: bridge
+    external: false
+
+
+volumes:
+  kong_data: {}
+  kong_prefix_vol:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+  kong_tmp_vol:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+  customers_mongo_data:
+  prom_data:

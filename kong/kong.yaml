@@ -1,0 +1,32 @@
+_format_version: "2.1"
+_transform: true
+
+services:
+  - name: customers_service
+    url: http://customers_service:3001
+    routes:
+      - name: customer-service-routes
+        paths:
+          - /cs
+        strip_path: true
+    plugins:
+      - name: acl
+        config:
+          allow:
+            - revendeurs
+      - name: basic-auth
+      - name: prometheus
+
+consumers:
+  - username: revendeur
+    basicauth_credentials:
+      - username: revendeur
+        password: revendeur
+    acls:
+      - group: revendeurs
+  - username: webshop
+    basicauth_credentials:
+      - username: webshop
+        password: webshop
+    acls:
+      - group: webshops
