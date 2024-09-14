@@ -86,7 +86,7 @@ services:
       - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
       - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
     ports:
-      - "3002:3000"
+      - "3002:3002"
   
   customers_service:
     image: louis3449/customers-api:0.0.1
@@ -94,7 +94,6 @@ services:
     restart: on-failure
     depends_on:
       - rabbitmq
-      - customers_mongo
     networks:
       - kong-net
     environment:
