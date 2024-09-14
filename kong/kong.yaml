@@ -9,13 +9,29 @@ services:
         paths:
           - /cs
         strip_path: true
-    plugins:
-      - name: acl
-        config:
-          allow:
-            - revendeurs
-      - name: basic-auth
-      - name: prometheus
+        plugins:
+          - name: acl
+            config:
+              allow:
+              - webshops
+
+  - name: products_service
+    url: http://products_service:3002
+    routes:
+      - name: product-service-routes
+        paths:
+          - /ps
+        strip_path: true
+        protocols:
+          - http
+          - https
+        plugins:
+          - name: acl
+            config:
+              allow:
+              - revendeurs
+          - name: basic-auth
+          - name: prometheus
 
 consumers:
   - username: revendeur

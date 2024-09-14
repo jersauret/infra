@@ -1,17 +1,16 @@
 version: '3.9'
 
 x-kong-config: &kong-env
-  KONG_DATABASE: ${KONG_DATABASE:-off}
+  KONG_DECLARATIVE_CONFIG: /opt/kong/kong.yaml
 
 services:
   kong:
-    image: kong/kong-gateway:3.3.1.0
+    image: kong/kong-gateway:3.8.0.0
     user: "${KONG_USER}"
     networks:
       - kong-net
     environment:
       <<: *kong-env
-      KONG_DECLARATIVE_CONFIG: "/opt/kong/kong.yaml"
       KONG_PROXY_ACCESS_LOG: /dev/stdout
       KONG_ADMIN_ACCESS_LOG: /dev/stdout
       KONG_PROXY_ERROR_LOG: /dev/stderr
@@ -19,6 +18,7 @@ services:
       KONG_ADMIN_LISTEN: 0.0.0.0:${KONG_ADMIN_PORT}
       KONG_PROXY_LISTEN: 0.0.0.0:${KONG_PROXY_PORT}
       KONG_ADMIN_GUI_URL: ${KONG_ADMIN_GUI_URL}
+      KONG_DATABASE: ${KONG_DATABASE}
     volumes:
       - ./kong/kong.yaml:/opt/kong/kong.yaml
     ports:
@@ -35,7 +35,7 @@ services:
       nofile:
         soft: 4096
         hard: 4096
-
+        
   prometheus:
     image: prom/prometheus
     container_name: prometheus
@@ -75,14 +75,25 @@ services:
     networks:
       - kong-net
     restart: on-failure
-
+  
+  products_service:
+    image: louis3449/products-api:0.0.1
+    container_name: products_service
+    restart: on-failure
+    networks:
+      - kong-net
+    environment:
+      - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
+      - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
+    ports:
+      - "3002:3002"
+  
   customers_service:
+    image: louis3449/customers-api:0.0.1
     container_name: customers_service
-    build: ../API-PayeTonKawa-Customers
     restart: on-failure
     depends_on:
       - rabbitmq
-      - customers_mongo
     networks:
       - kong-net
     environment:
@@ -91,20 +102,10 @@ services:
     ports:
       - "3001:3001"
 
-  customers_mongo:
-    image: mongo
-    container_name: mongo
-    ports:
-      - "27017:27017"
-    volumes:
-      - customers_mongo_data:/data/db
-    networks:
-        - kong-net
 networks:
   kong-net:
     driver: bridge
     external: false
-
 
 volumes:
   kong_data: {}
